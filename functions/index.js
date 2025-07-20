@@ -25,10 +25,13 @@ setGlobalOptions({ maxInstances: 10 });
 // https://firebase.google.com/docs/functions/get-started
 
 exports.reset = onRequest(async (request, response) => {
+  response.send("OK");
 });
 
 exports.balance = onRequest(async (request, response) => {
+  response.send({});
 });
 
 exports.event = onRequest(async (request, response) => {
+  response.send({});
 });

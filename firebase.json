@@ -36,6 +36,20 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/reset",
+        "function": "reset"
+      },
+      {
+        "source": "/balance",
+        "function": "balance"
+      },
+      {
+        "source": "/event",
+        "function": "event"
+      }
     ]
   }
 }
