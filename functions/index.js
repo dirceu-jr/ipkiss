@@ -54,7 +54,28 @@ exports.reset = onRequest(async (request, response) => {
 });
 
 exports.balance = onRequest(async (request, response) => {
-  response.send({});
+  if (request.method !== "GET") {
+    response.status(405).send({ status: "Method Not Allowed." });
+    return;
+  }
+
+  const account_id = request.query.account_id;
+
+  if (!account_id) {
+    response.status(400).send({ status: "Missing account ID." });
+    return;
+  }
+
+  const accounts = db.collection("accounts");
+  const accountRef = accounts.doc(account_id);
+  const accountSnapshot = await accountRef.get();
+
+  if (!accountSnapshot.exists) {
+    response.status(404).send("0");
+    return;
+  }
+
+  response.send(accountSnapshot.data().balance.toString());
 });
 
 exports.event = onRequest(async (request, response) => {
