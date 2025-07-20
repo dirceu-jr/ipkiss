@@ -148,41 +148,54 @@ exports.event = onRequest(async (request, response) => {
       return;
     }
 
-    const originRef = accounts.doc(origin);
-    const destinationRef = accounts.doc(destination);
-    const originSnapshot = await originRef.get();
-    let destinationSnapshot = await destinationRef.get();
+    // Use Firestore transaction for atomicity
+    try {
+      const result = await db.runTransaction(async (transaction) => {
+        const originRef = accounts.doc(origin);
+        const destinationRef = accounts.doc(destination);
+        
+        const originDoc = await transaction.get(originRef);
+        let destinationDoc = await transaction.get(destinationRef);
 
-    if (!originSnapshot.exists) {
-      response.status(404).send("0");
-      return;
+        if (!originDoc.exists) {
+          throw new Error("ORIGIN_NOT_FOUND");
+        }
+
+        const originBalance = originDoc.data().balance || 0;
+        if (originBalance < amount) {
+          throw new Error("INSUFFICIENT_FUNDS");
+        }
+
+        // Create destination account if it doesn't exist
+        if (!destinationDoc.exists) {
+          transaction.set(destinationRef, { balance: 0 });
+          destinationDoc = { data: () => ({ balance: 0 }) };
+        }
+
+        const destinationBalance = destinationDoc.data().balance || 0;
+        const newOriginBalance = originBalance - amount;
+        const newDestinationBalance = destinationBalance + amount;
+
+        transaction.update(originRef, { balance: newOriginBalance });
+        transaction.update(destinationRef, { balance: newDestinationBalance });
+
+        return {
+          origin: { id: origin, balance: newOriginBalance },
+          destination: { id: destination, balance: newDestinationBalance }
+        };
+      });
+
+      response.status(201).send(result);
+    } catch (error) {
+      if (error.message === "ORIGIN_NOT_FOUND") {
+        response.status(404).send("0");
+      } else if (error.message === "INSUFFICIENT_FUNDS") {
+        response.status(400).send({ status: "Insufficient funds." });
+      } else {
+        console.error("Transaction failed:", error);
+        response.status(500).send({ status: "Transaction failed." });
+      }
     }
-
-    if (!destinationSnapshot.exists) {
-      // create a new account if it does not exist
-      await destinationRef.set({ balance: 0 });
-      destinationSnapshot = await destinationRef.get();
-    }
-
-    const originBalance = originSnapshot.data().balance || 0;
-
-    if (originBalance < amount) {
-      response.status(400).send({ status: "Insufficient funds." });
-      return;
-    }
-
-    const newOriginBalance = originBalance - amount;
-    const destinationBalance = destinationSnapshot.data().balance || 0;
-    const newDestinationBalance = destinationBalance + amount;
-
-    await originRef.update({ balance: newOriginBalance });
-    await destinationRef.update({ balance: newDestinationBalance });
-
-    response.status(201).send({
-      origin: { id: origin, balance: newOriginBalance },
-      destination: { id: destination, balance: newDestinationBalance },
-    });
-
   } else {
     response.status(400).send({ status: "Invalid event type." });
     return;
