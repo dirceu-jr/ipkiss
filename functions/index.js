@@ -58,5 +58,21 @@ exports.balance = onRequest(async (request, response) => {
 });
 
 exports.event = onRequest(async (request, response) => {
-  response.send({});
+  if (request.method !== "POST") {
+    response.status(405).send({ status: "Method Not Allowed." });
+    return;
+  }
+
+  const eventType = request.body.type;
+
+  if (eventType == "deposit") {
+    // TODO
+  } else if (eventType == "withdraw") {
+    // TODO
+  } else if (eventType == "transfer") {
+    // TODO
+  } else {
+    response.status(400).send({ status: "Invalid event type." });
+    return;
+  }
 });
