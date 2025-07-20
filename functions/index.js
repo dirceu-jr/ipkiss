@@ -66,7 +66,30 @@ exports.event = onRequest(async (request, response) => {
   const eventType = request.body.type;
 
   if (eventType == "deposit") {
-    // TODO
+    const destination = request.body.destination;
+    const amount = request.body.amount;
+
+    if (!destination || !amount) {
+      response.status(400).send({ status: "Missing destination or amount." });
+      return;
+    }
+
+    const accounts = db.collection("accounts");
+    const accountRef = accounts.doc(destination);
+    const accountSnapshot = await accountRef.get();
+
+    if (!accountSnapshot.exists) {
+      // create a new account if it does not exist
+      await accountRef.set({ balance: amount });
+      response.status(201).send({ destination: { id: destination, balance: amount } });
+    } else {
+      const currentBalance = accountSnapshot.data().balance || 0;
+      const newBalance = currentBalance + amount;
+
+      await accountRef.update({ balance: newBalance });
+      response.status(201).send({ destination: { id: destination, balance: newBalance } });
+    }
+
   } else if (eventType == "withdraw") {
     // TODO
   } else if (eventType == "transfer") {
