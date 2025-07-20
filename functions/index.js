@@ -85,6 +85,7 @@ exports.event = onRequest(async (request, response) => {
   }
 
   const eventType = request.body.type;
+  const accounts = db.collection("accounts");
 
   if (eventType == "deposit") {
     const destination = request.body.destination;
@@ -95,7 +96,6 @@ exports.event = onRequest(async (request, response) => {
       return;
     }
 
-    const accounts = db.collection("accounts");
     const accountRef = accounts.doc(destination);
     const accountSnapshot = await accountRef.get();
 
@@ -120,7 +120,6 @@ exports.event = onRequest(async (request, response) => {
       return;
     }
 
-    const accounts = db.collection("accounts");
     const accountRef = accounts.doc(origin);
     const accountSnapshot = await accountRef.get();
 
@@ -149,7 +148,6 @@ exports.event = onRequest(async (request, response) => {
       return;
     }
 
-    const accounts = db.collection("accounts");
     const originRef = accounts.doc(origin);
     const destinationRef = accounts.doc(destination);
     const originSnapshot = await originRef.get();
