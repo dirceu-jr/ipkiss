@@ -119,7 +119,51 @@ exports.event = onRequest(async (request, response) => {
     response.status(201).send({ origin: { id: origin, balance: newBalance } });
 
   } else if (eventType == "transfer") {
-    // TODO
+    const origin = request.body.origin;
+    const amount = request.body.amount;
+    const destination = request.body.destination;
+
+    if (!origin || !amount || !destination) {
+      response.status(400).send({ status: "Missing origin, amount, or destination." });
+      return;
+    }
+
+    const accounts = db.collection("accounts");
+    const originRef = accounts.doc(origin);
+    const destinationRef = accounts.doc(destination);
+    const originSnapshot = await originRef.get();
+    let destinationSnapshot = await destinationRef.get();
+
+    if (!originSnapshot.exists) {
+      response.status(404).send("0");
+      return;
+    }
+
+    if (!destinationSnapshot.exists) {
+      // create a new account if it does not exist
+      await destinationRef.set({ balance: 0 });
+      destinationSnapshot = await destinationRef.get();
+    }
+
+    const originBalance = originSnapshot.data().balance || 0;
+
+    if (originBalance < amount) {
+      response.status(400).send({ status: "Insufficient funds." });
+      return;
+    }
+
+    const newOriginBalance = originBalance - amount;
+    const destinationBalance = destinationSnapshot.data().balance || 0;
+    const newDestinationBalance = destinationBalance + amount;
+
+    await originRef.update({ balance: newOriginBalance });
+    await destinationRef.update({ balance: newDestinationBalance });
+
+    response.status(201).send({
+      origin: { id: origin, balance: newOriginBalance },
+      destination: { id: destination, balance: newDestinationBalance },
+    });
+
   } else {
     response.status(400).send({ status: "Invalid event type." });
     return;
