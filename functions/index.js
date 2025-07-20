@@ -25,7 +25,32 @@ setGlobalOptions({ maxInstances: 10 });
 // https://firebase.google.com/docs/functions/get-started
 
 exports.reset = onRequest(async (request, response) => {
-  response.send("OK");
+  if (request.method !== "POST") {
+    response.status(405).send({ status: "Method Not Allowed." });
+    return;
+  }
+
+  try {
+    const accounts = db.collection("accounts");
+
+    // Get all documents in the accounts collection
+    const snapshot = await accounts.get();
+
+    // Create a batch to delete all documents
+    const batch = db.batch();
+
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    // Commit the batch delete
+    await batch.commit();
+
+    response.send("OK");
+  } catch (error) {
+    console.error("Error deleting accounts:", error);
+    response.status(500).send("Error deleting accounts");
+  }
 });
 
 exports.balance = onRequest(async (request, response) => {
