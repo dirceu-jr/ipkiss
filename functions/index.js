@@ -91,7 +91,33 @@ exports.event = onRequest(async (request, response) => {
     }
 
   } else if (eventType == "withdraw") {
-    // TODO
+    const origin = request.body.origin;
+    const amount = request.body.amount;
+
+    if (!origin || !amount) {
+      response.status(400).send({ status: "Missing origin or amount." });
+      return;
+    }
+
+    const accounts = db.collection("accounts");
+    const accountRef = accounts.doc(origin);
+    const accountSnapshot = await accountRef.get();
+
+    if (!accountSnapshot.exists) {
+      response.status(404).send("0");
+      return;
+    }
+
+    const currentBalance = accountSnapshot.data().balance || 0;
+    if (currentBalance < amount) {
+      response.status(400).send({ status: "Insufficient funds." });
+      return;
+    }
+
+    const newBalance = currentBalance - amount;
+    await accountRef.update({ balance: newBalance });
+    response.status(201).send({ origin: { id: origin, balance: newBalance } });
+
   } else if (eventType == "transfer") {
     // TODO
   } else {
